@@ -1,3 +1,5 @@
 *.o
 *.swp
 xmltest
+x64/
+.vs/
