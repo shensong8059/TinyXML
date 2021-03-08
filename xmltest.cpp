@@ -1,11 +1,14 @@
-/*
+ï»¿/*
    Test program for TinyXML.
 */
 
+#include "tinyxml.h"
 
 #ifdef TIXML_USE_STL
 	#include <iostream>
 	#include <sstream>
+#include <fstream>
+#include <regex>
 	using namespace std;
 #else
 	#include <stdio.h>
@@ -17,28 +20,27 @@
 	_CrtMemState endMemState;
 #endif
 
-#include "tinyxml.h"
 
-bool XmlTest (const char* testString, const char* expected, const char* found, bool noEcho = false);
-bool XmlTest( const char* testString, int expected, int found, bool noEcho = false );
+bool XmlTest (const string & testString, const string & expected, const string & found, bool noEcho = false);
+bool XmlTest( const string & testString, int expected, int found, bool noEcho = false );
 
 static int gPass = 0;
 static int gFail = 0;
 
 
 
-bool XmlTest (const char* testString, const char* expected, const char* found, bool noEcho )
+bool XmlTest (const string & testString, const string & expected, const string & found, bool noEcho )
 {
-	bool pass = !strcmp( expected, found );
+	bool pass = expected== found ;
 	if ( pass )
 		printf ("[pass]");
 	else
 		printf ("[fail]");
 
 	if ( noEcho )
-		printf (" %s\n", testString);
+		cout<< testString<<"\n" ;
 	else
-		printf (" %s [%s][%s]\n", testString, expected, found);
+		cout<<" "<< testString <<" ["<< expected <<"]["<< found <<"]\n";
 
 	if ( pass )
 		++gPass;
@@ -48,7 +50,7 @@ bool XmlTest (const char* testString, const char* expected, const char* found, b
 }
 
 
-bool XmlTest( const char* testString, int expected, int found, bool noEcho )
+bool XmlTest( const string & testString, int expected, int found, bool noEcho )
 {
 	bool pass = ( expected == found );
 	if ( pass )
@@ -57,9 +59,9 @@ bool XmlTest( const char* testString, int expected, int found, bool noEcho )
 		printf ("[fail]");
 
 	if ( noEcho )
-		printf (" %s\n", testString);
+		cout<<" "<< testString <<"\n";
 	else
-		printf (" %s [%d][%d]\n", testString, expected, found);
+		cout<<" "<< testString <<" ["<< expected <<"]["<< found <<"]\n";
 
 	if ( pass )
 		++gPass;
@@ -87,14 +89,20 @@ void NullLineEndings( char* p )
 // and show how to add and remove nodes.
 //
 
+using namespace std;
+
 int main()
 {
+	string str = "<afsdkjksajf";
+	regex re("^<sdk");
+	smatch m;
+	auto res=regex_search(str.cbegin(),str.cend(),m, re);
 
 	//
 	// We start with the 'demoStart' todo list. Process it. And
 	// should hopefully end up with the todo list as illustrated.
 	//
-	const char* demoStart =
+	string demoStart =
 		"<?xml version=\"1.0\"  standalone='no' >\n"
 		"<!-- Our to do list data -->"
 		"<ToDo>\n"
@@ -139,7 +147,7 @@ int main()
 			// Write to a file and read it back, to check file I/O.
 
 			TiXmlDocument doc( "demotest.xml" );
-			doc.Parse( demoStart );
+			doc.Parse( demoStart.begin(),demoStart.end() );
 
 			if ( doc.Error() )
 			{
@@ -148,7 +156,7 @@ int main()
 			}
 			doc.SaveFile();
 		}
-
+		return 0;
 		TiXmlDocument doc( "demotest.xml" );
 		bool loadOkay = doc.LoadFile();
 
@@ -160,13 +168,13 @@ int main()
 
 		printf( "** Demo doc read from disk: ** \n\n" );
 		printf( "** Printing via doc.Print **\n" );
-		doc.Print( stdout );
+		doc.Print( cout );
 
 		{
 			printf( "** Printing via TiXmlPrinter **\n" );
 			TiXmlPrinter printer;
 			doc.Accept( &printer );
-			fprintf( stdout, "%s", printer.CStr() );
+			fprintf( stdout, "%s", printer.Str().c_str() );
 		}
 		#ifdef TIXML_USE_STL	
 		{
@@ -256,7 +264,7 @@ int main()
 		todoElement->InsertAfterChild( itemElement, item );
 
 		printf( "\n** Demo doc processed: ** \n\n" );
-		doc.Print( stdout );
+		doc.Print( cout );
 
 
 	#ifdef TIXML_USE_STL
@@ -277,16 +285,13 @@ int main()
 		cout << "** Basic structure. **\n";
 		ostringstream outputStream( ostringstream::out );
 		outputStream << doc;
-		XmlTest( "Output stream correct.",	string( demoEnd ).c_str(),
-											outputStream.str().c_str(), true );
+		XmlTest( "Output stream correct.",demoEnd,outputStream.str(), true );
 	#endif
 
 		node = doc.RootElement();
 		assert( node );
 		XmlTest( "Root element exists.", true, ( node != 0 && node->ToElement() ) );
-		XmlTest ( "Root element value is 'ToDo'.", "ToDo",  node->Value());
-
-		node = node->FirstChild();
+		XmlTest ( "Root element value is 'ToDo'.", "ToDo",  node->Value());	node = node->FirstChild();
 		XmlTest( "First child exists & is a comment.", true, ( node != 0 && node->ToComment() ) );
 		node = node->NextSibling();
 		XmlTest( "Sibling element exists & is an element.", true, ( node != 0 && node->ToElement() ) );
@@ -339,6 +344,7 @@ int main()
 			count++;
 		}
 		XmlTest( "Children of the 'ToDo' element, using First / Next.",
+
 			3, count );
 
 		// Walk all the elements in a node by value.
@@ -375,13 +381,13 @@ int main()
 	#endif
 
 		{
-			const char* error =	"<?xml version=\"1.0\" standalone=\"no\" ?>\n"
+			string error =	"<?xml version=\"1.0\" standalone=\"no\" ?>\n"
 								"<passages count=\"006\" formatversion=\"20020620\">\n"
 								"    <wrong error>\n"
 								"</passages>";
 
 			TiXmlDocument docTest;
-			docTest.Parse( error );
+			docTest.Parse( error.begin(),error.end() );
 			XmlTest( "Error row", docTest.ErrorRow(), 3 );
 			XmlTest( "Error column", docTest.ErrorCol(), 17 );
 			//printf( "error=%d id='%s' row %d col%d\n", (int) doc.Error(), doc.ErrorDesc(), doc.ErrorRow()+1, doc.ErrorCol() + 1 );
@@ -404,23 +410,25 @@ int main()
 			ostringstream outputStream0( ostringstream::out );
 			outputStream0 << document0;
 
-			XmlTest( "Stream round trip correct.",	string( demoEnd ).c_str(), 
+			XmlTest( "Stream round trip correct.",	string( demoEnd ).c_str(),
+ 
 													outputStream0.str().c_str(), true );
 
 			std::string str;
 			str << document0;
 
-			XmlTest( "String printing correct.", string( demoEnd ).c_str(), 
+			XmlTest( "String printing correct.", string( demoEnd ).c_str(),
+ 
 												 str.c_str(), true );
 		}
 	#endif
 	}
 
 	{
-		const char* str = "<doc attr0='1' attr1='2.0' attr2='foo' />";
+		string str = "<doc attr0='1' attr1='2.0' attr2='foo' />";
 
 		TiXmlDocument doc;
-		doc.Parse( str );
+		doc.Parse( str.begin(),str.end() );
 
 		TiXmlElement* ele = doc.FirstChildElement();
 
@@ -442,10 +450,10 @@ int main()
 	}
 
 	{
-		const char* str = "<doc/>";
+		string str = "<doc/>";
 
 		TiXmlDocument doc;
-		doc.Parse( str );
+		doc.Parse( str.begin(),str.end() );
 
 		TiXmlElement* ele = doc.FirstChildElement();
 
@@ -456,7 +464,7 @@ int main()
 		ele->SetAttribute( "int", 1 );
 		ele->SetDoubleAttribute( "double", -1.0 );
 
-		const char* cStr = ele->Attribute( "str" );
+		auto cStr = ele->Attribute( "str" );
 		ele->QueryIntAttribute( "int", &iVal );
 		ele->QueryDoubleAttribute( "double", &dVal );
 
@@ -466,12 +474,12 @@ int main()
 	}
 	
 	{
-		const char* str =	"\t<?xml version=\"1.0\" standalone=\"no\" ?>\t<room doors='2'>\n"
+		string str =	"\t<?xml version=\"1.0\" standalone=\"no\" ?>\t<room doors='2'>\n"
 							"</room>";
 
 		TiXmlDocument doc;
 		doc.SetTabSize( 8 );
-		doc.Parse( str );
+		doc.Parse( str.begin(),str.end() );
 
 		TiXmlHandle docHandle( &doc );
 		TiXmlHandle roomHandle = docHandle.FirstChildElement( "room" );
@@ -491,14 +499,14 @@ int main()
 	}
 	
 	{
-		const char* str =	"\t<?xml version=\"1.0\" standalone=\"no\" ?>\t<room doors='2'>\n"
+		string str =	"\t<?xml version=\"1.0\" standalone=\"no\" ?>\t<room doors='2'>\n"
 							"  <!-- Silly example -->\n"
 							"    <door wall='north'>A great door!</door>\n"
 							"\t<door wall='east'/>"
 							"</room>";
 
 		TiXmlDocument doc;
-		doc.Parse( str );
+		doc.Parse( str.begin(),str.end() );
 
 		TiXmlHandle docHandle( &doc );
 		TiXmlHandle roomHandle = docHandle.FirstChildElement( "room" );
@@ -578,7 +586,9 @@ int main()
 
 			TiXmlText* text = docH.FirstChildElement( "document" ).FirstChildElement( (const char*) russianElementName ).Child( 0 ).Text();
 			XmlTest( "UTF-8: Browsing russian element name.",
+
 					 russianText,
+
 					 text->Value(),
 					 true );
 			XmlTest( "UTF-8: Russian element name row.", 7, text->Row() );
@@ -628,10 +638,10 @@ int main()
 			// the word "resume" with the correct accents, in a latin encoding.
 			// It will be something else completely on non-wester machines,
 			// which is why TinyXml is switching to UTF-8.
-			const char latin[] = "<element>r\x82sum\x82</element>";
+			string latin = "<element>r\x82sum\x82</element>";
 
 			TiXmlDocument latinDoc;
-			latinDoc.Parse( latin, 0, TIXML_ENCODING_LEGACY );
+			latinDoc.Parse( latin.begin(),latin.end(), 0, TIXML_ENCODING_LEGACY );
 
 			text = latinDoc.FirstChildElement()->FirstChild()->ToText();
 			XmlTest( "Legacy encoding: Verify text element.", "r\x82sum\x82", text->Value() );
@@ -644,21 +654,24 @@ int main()
 	printf ("\n** Copy and Assignment **\n");
 	{
 		TiXmlElement element( "foo" );
-		element.Parse( "<element name='value' />", 0, TIXML_ENCODING_UNKNOWN );
+		string str = "<element name='value' />";
+		element.Parse(str.begin(),str.end(), 0, TIXML_ENCODING_UNKNOWN );
 
 		TiXmlElement elementCopy( element );
 		TiXmlElement elementAssign( "foo" );
-		elementAssign.Parse( "<incorrect foo='bar'/>", 0, TIXML_ENCODING_UNKNOWN );
+		str = "<incorrect foo='bar'/>";
+		elementAssign.Parse(str.begin(),str.end(), 0, TIXML_ENCODING_UNKNOWN );
 		elementAssign = element;
 
 		XmlTest( "Copy/Assign: element copy #1.", "element", elementCopy.Value() );
 		XmlTest( "Copy/Assign: element copy #2.", "value", elementCopy.Attribute( "name" ) );
 		XmlTest( "Copy/Assign: element assign #1.", "element", elementAssign.Value() );
 		XmlTest( "Copy/Assign: element assign #2.", "value", elementAssign.Attribute( "name" ) );
-		XmlTest( "Copy/Assign: element assign #3.", true, ( 0 == elementAssign.Attribute( "foo" )) );
+		XmlTest( "Copy/Assign: element assign #3.", true, ( elementAssign.Attribute( "foo" ).empty()) );
 
 		TiXmlComment comment;
-		comment.Parse( "<!--comment-->", 0, TIXML_ENCODING_UNKNOWN );
+		str = "<!--comment-->";
+		comment.Parse(str.begin(),str.end() , 0, TIXML_ENCODING_UNKNOWN );
 		TiXmlComment commentCopy( comment );
 		TiXmlComment commentAssign;
 		commentAssign = commentCopy;
@@ -666,10 +679,12 @@ int main()
 		XmlTest( "Copy/Assign: comment assign.", "comment", commentAssign.Value() );
 
 		TiXmlUnknown unknown;
-		unknown.Parse( "<[unknown]>", 0, TIXML_ENCODING_UNKNOWN );
+		str = "<[unknown]>";
+		unknown.Parse( str.begin(),str.end(), 0, TIXML_ENCODING_UNKNOWN );
 		TiXmlUnknown unknownCopy( unknown );
 		TiXmlUnknown unknownAssign;
-		unknownAssign.Parse( "incorrect", 0, TIXML_ENCODING_UNKNOWN );
+		str = "incorrect";
+		unknownAssign.Parse( str.begin(),str.end(), 0, TIXML_ENCODING_UNKNOWN );
 		unknownAssign = unknownCopy;
 		XmlTest( "Copy/Assign: unknown copy.", "[unknown]", unknownCopy.Value() );
 		XmlTest( "Copy/Assign: unknown assign.", "[unknown]", unknownAssign.Value() );
@@ -682,7 +697,8 @@ int main()
 		XmlTest( "Copy/Assign: text assign.", "TextNode", textAssign.Value() );
 
 		TiXmlDeclaration dec;
-		dec.Parse( "<?xml version='1.0' encoding='UTF-8'?>", 0, TIXML_ENCODING_UNKNOWN );
+		str = "<?xml version='1.0' encoding='UTF-8'?>";
+		dec.Parse( str.begin(),str.end(), 0, TIXML_ENCODING_UNKNOWN );
 		TiXmlDeclaration decCopy( dec );
 		TiXmlDeclaration decAssign;
 		decAssign = dec;
@@ -720,7 +736,9 @@ int main()
 		TiXmlElement text1( "text" );
 		parse1 >> text1;
 
-		XmlTest ( "Condense white space OFF.", "This  is    \ntext",
+		XmlTest ( "Condense white space OFF.",
+ "This  is    \ntext",
+
 					text1.FirstChild()->Value(),
 					true );
 	}
@@ -730,16 +748,16 @@ int main()
 	//////////////////////////////////////////////////////
 	// GetText();
 	{
-		const char* str = "<foo>This is text</foo>";
+		string str = "<foo>This is text</foo>";
 		TiXmlDocument doc;
-		doc.Parse( str );
+		doc.Parse( str.begin(),str.end() );
 		const TiXmlElement* element = doc.RootElement();
 
 		XmlTest( "GetText() normal use.", "This is text", element->GetText() );
 
 		str = "<foo><b>This is text</b></foo>";
 		doc.Clear();
-		doc.Parse( str );
+		doc.Parse( str.begin(),str.end() );
 		element = doc.RootElement();
 
 		XmlTest( "GetText() contained element.", element->GetText() == 0, true );
@@ -747,7 +765,7 @@ int main()
 		str = "<foo>This is <b>text</b></foo>";
 		doc.Clear();
 		TiXmlBase::SetCondenseWhiteSpace( false );
-		doc.Parse( str );
+		doc.Parse( str.begin(),str.end() );
 		TiXmlBase::SetCondenseWhiteSpace( true );
 		element = doc.RootElement();
 
@@ -758,17 +776,18 @@ int main()
 	//////////////////////////////////////////////////////
 	// CDATA
 	{
-		const char* str =	"<xmlElement>"
+		string str =	"<xmlElement>"
 								"<![CDATA["
 									"I am > the rules!\n"
 									"...since I make symbolic puns"
 								"]]>"
 							"</xmlElement>";
 		TiXmlDocument doc;
-		doc.Parse( str );
+		doc.Parse( str.begin(),str.end() );
 		doc.Print();
 
-		XmlTest( "CDATA parse.", doc.FirstChildElement()->FirstChild()->Value(), 
+		XmlTest( "CDATA parse.", doc.FirstChildElement()->FirstChild()->Value(),
+ 
 								 "I am > the rules!\n...since I make symbolic puns",
 								 true );
 
@@ -781,7 +800,8 @@ int main()
 		parse0 >> doc;
 		//cout << doc << '\n';
 
-		XmlTest( "CDATA stream.", doc.FirstChildElement()->FirstChild()->Value(), 
+		XmlTest( "CDATA stream.", doc.FirstChildElement()->FirstChild()->Value(),
+ 
 								 "I am > the rules!\n...since I make symbolic puns",
 								 true );
 		#endif
@@ -789,7 +809,8 @@ int main()
 		TiXmlDocument doc1 = doc;
 		//doc.Print();
 
-		XmlTest( "CDATA copy.", doc1.FirstChildElement()->FirstChild()->Value(), 
+		XmlTest( "CDATA copy.", doc1.FirstChildElement()->FirstChild()->Value(),
+ 
 								 "I am > the rules!\n...since I make symbolic puns",
 								 true );
 	}
@@ -805,13 +826,13 @@ int main()
 		str += "]]></xmlElement>";
 
 		TiXmlDocument doc;
-		doc.Parse( str.c_str() );
+		doc.Parse( str.begin() ,str.end());
 
 		TiXmlPrinter printer;
 		printer.SetStreamPrinting();
 		doc.Accept( &printer );
 
-		XmlTest( "CDATA with all bytes #1.", str.c_str(), printer.CStr(), true );
+		XmlTest( "CDATA with all bytes #1.", str.c_str(), printer.Str().c_str(), true );
 
 		#ifdef TIXML_USE_STL
 		doc.Clear();
@@ -819,23 +840,24 @@ int main()
 		iss >> doc;
 		std::string out;
 		out << doc;
-		XmlTest( "CDATA with all bytes #2.", out.c_str(), printer.CStr(), true );
+		XmlTest( "CDATA with all bytes #2.", out.c_str(), printer.Str(), true );
 		#endif
 	}
 	{
 		// [ 1480107 ] Bug-fix for STL-streaming of CDATA that contains tags
 		// CDATA streaming had a couple of bugs, that this tests for.
-		const char* str =	"<xmlElement>"
+		string str =	"<xmlElement>"
 								"<![CDATA["
 									"<b>I am > the rules!</b>\n"
 									"...since I make symbolic puns"
 								"]]>"
 							"</xmlElement>";
 		TiXmlDocument doc;
-		doc.Parse( str );
+		doc.Parse( str.begin(),str.end() );
 		doc.Print();
 
-		XmlTest( "CDATA parse. [ 1480107 ]", doc.FirstChildElement()->FirstChild()->Value(), 
+		XmlTest( "CDATA parse. [ 1480107 ]", doc.FirstChildElement()->FirstChild()->Value(),
+ 
 								 "<b>I am > the rules!</b>\n...since I make symbolic puns",
 								 true );
 
@@ -846,7 +868,8 @@ int main()
 		istringstream parse0( str );
 		parse0 >> doc;
 
-		XmlTest( "CDATA stream. [ 1480107 ]", doc.FirstChildElement()->FirstChild()->Value(), 
+		XmlTest( "CDATA stream. [ 1480107 ]", doc.FirstChildElement()->FirstChild()->Value(),
+ 
 								 "<b>I am > the rules!</b>\n...since I make symbolic puns",
 								 true );
 		#endif
@@ -854,7 +877,8 @@ int main()
 		TiXmlDocument doc1 = doc;
 		//doc.Print();
 
-		XmlTest( "CDATA copy. [ 1480107 ]", doc1.FirstChildElement()->FirstChild()->Value(), 
+		XmlTest( "CDATA copy. [ 1480107 ]", doc1.FirstChildElement()->FirstChild()->Value(),
+ 
 								 "<b>I am > the rules!</b>\n...since I make symbolic puns",
 								 true );
 	}
@@ -869,20 +893,18 @@ int main()
 	const int FUZZ_ITERATION = 300;
 
 	// The only goal is not to crash on bad input.
-	int len = (int) strlen( demoStart );
+	int len = (int)demoStart.size();
 	for( int i=0; i<FUZZ_ITERATION; ++i ) 
 	{
-		char* demoCopy = new char[ len+1 ];
-		strcpy( demoCopy, demoStart );
+		auto demoCopy = demoStart;
 
 		demoCopy[ i%len ] = (char)((i+1)*3);
 		demoCopy[ (i*7)%len ] = '>';
 		demoCopy[ (i*11)%len ] = '<';
 
 		TiXmlDocument xml;
-		xml.Parse( demoCopy );
+		xml.Parse( demoCopy.begin(),demoCopy.end() );
 
-		delete [] demoCopy;
 	}
 	printf( "** Fuzzing Complete. **\n" );
 	
@@ -951,7 +973,7 @@ int main()
 		// Entities not being written correctly.
 		// From Lynn Allen
 
-		const char* passages =
+		string passages =
 			"<?xml version=\"1.0\" standalone=\"no\" ?>"
 			"<passages count=\"006\" formatversion=\"20020620\">"
 				"<psg context=\"Line 5 has &quot;quotation marks&quot; and &apos;apostrophe marks&apos;."
@@ -959,32 +981,34 @@ int main()
 			"</passages>";
 
 		TiXmlDocument doc( "passages.xml" );
-		doc.Parse( passages );
+		doc.Parse( passages.begin(),passages.end() );
 		TiXmlElement* psg = doc.RootElement()->FirstChildElement();
-		const char* context = psg->Attribute( "context" );
+		auto context = psg->Attribute( "context" );
 		const char* expected = "Line 5 has \"quotation marks\" and 'apostrophe marks'. It also has <, >, and &, as well as a fake copyright \xC2\xA9.";
 
 		XmlTest( "Entity transformation: read. ", expected, context, true );
 
-		FILE* textfile = fopen( "textfile.txt", "w" );
+		fstream textfile( "textfile.txt" ,ios::out);
 		if ( textfile )
 		{
 			psg->Print( textfile, 0 );
-			fclose( textfile );
+			textfile.close();
 		}
-		textfile = fopen( "textfile.txt", "r" );
+		textfile.open( "textfile.txt",ios::in);
 		assert( textfile );
 		if ( textfile )
 		{
-			char buf[ 1024 ];
-			fgets( buf, 1024, textfile );
+			string buf( 1024,'\0' );
+			textfile.getline( buf.data(), buf.size()  );
 			XmlTest( "Entity transformation: write. ",
+
 					 "<psg context=\'Line 5 has &quot;quotation marks&quot; and &apos;apostrophe marks&apos;."
 					 " It also has &lt;, &gt;, and &amp;, as well as a fake copyright \xC2\xA9.' />",
+
 					 buf,
 					 true );
 		}
-		fclose( textfile );
+		 textfile.close();
 	}
 
     {
@@ -1013,6 +1037,7 @@ int main()
 
 			TiXmlText* text = doc.FirstChildElement()->FirstChildElement()->FirstChild()->ToText();
 			XmlTest( "Entity with one digit.",
+
 						text->Value(), "1.1 Start easy ignore fin thickness\n" );
 		}
     }
@@ -1020,7 +1045,7 @@ int main()
 	{
 		// DOCTYPE not preserved (950171)
 		// 
-		const char* doctype =
+		string doctype =
 			"<?xml version=\"1.0\" ?>"
 			"<!DOCTYPE PLAY SYSTEM 'play.dtd'>"
 			"<!ELEMENT title (#PCDATA)>"
@@ -1028,7 +1053,7 @@ int main()
 			"<element />";
 
 		TiXmlDocument doc;
-		doc.Parse( doctype );
+		doc.Parse( doctype.begin(),doctype.end() );
 		doc.SaveFile( "test7.xml" );
 		doc.Clear();
 		doc.LoadFile( "test7.xml" );
@@ -1047,10 +1072,10 @@ int main()
 	{
 		// [ 791411 ] Formatting bug
 		// Comments do not stream out correctly.
-		const char* doctype = 
+		string doctype = 
 			"<!-- Somewhat<evil> -->";
 		TiXmlDocument doc;
-		doc.Parse( doctype );
+		doc.Parse( doctype.begin(),doctype.end() );
 
 		TiXmlHandle docH( &doc );
 		TiXmlComment* comment = docH.Child( 0 ).Node()->ToComment();
@@ -1069,49 +1094,49 @@ int main()
 		TiXmlText* text;
 		TiXmlHandle docH( &doc );
 	
-		const char* doctype0 = "<element> This has leading and trailing space </element>";
-		const char* doctype1 = "<element>This has  internal space</element>";
-		const char* doctype2 = "<element> This has leading, trailing, and  internal space </element>";
+		string doctype0 = "<element> This has leading and trailing space </element>";
+		string doctype1 = "<element>This has  internal space</element>";
+		string doctype2 = "<element> This has leading, trailing, and  internal space </element>";
 
 		TiXmlBase::SetCondenseWhiteSpace( false );
 		doc.Clear();
-		doc.Parse( doctype0 );
+		doc.Parse( doctype0.begin(),doctype0.end() );
 		text = docH.FirstChildElement( "element" ).Child( 0 ).Text();
 		XmlTest( "White space kept.", " This has leading and trailing space ", text->Value() );
 
 		doc.Clear();
-		doc.Parse( doctype1 );
+		doc.Parse( doctype1.begin(),doctype1.end() );
 		text = docH.FirstChildElement( "element" ).Child( 0 ).Text();
 		XmlTest( "White space kept.", "This has  internal space", text->Value() );
 
 		doc.Clear();
-		doc.Parse( doctype2 );
+		doc.Parse( doctype2.begin(),doctype2.end() );
 		text = docH.FirstChildElement( "element" ).Child( 0 ).Text();
 		XmlTest( "White space kept.", " This has leading, trailing, and  internal space ", text->Value() );
 
 		TiXmlBase::SetCondenseWhiteSpace( true );
 		doc.Clear();
-		doc.Parse( doctype0 );
+		doc.Parse( doctype0.begin(),doctype0.end() );
 		text = docH.FirstChildElement( "element" ).Child( 0 ).Text();
 		XmlTest( "White space condensed.", "This has leading and trailing space", text->Value() );
 
 		doc.Clear();
-		doc.Parse( doctype1 );
+		doc.Parse( doctype1.begin(),doctype1.end() );
 		text = docH.FirstChildElement( "element" ).Child( 0 ).Text();
 		XmlTest( "White space condensed.", "This has internal space", text->Value() );
 
 		doc.Clear();
-		doc.Parse( doctype2 );
+		doc.Parse( doctype2.begin(),doctype2.end() );
 		text = docH.FirstChildElement( "element" ).Child( 0 ).Text();
 		XmlTest( "White space condensed.", "This has leading, trailing, and internal space", text->Value() );
 	}
 
 	{
 		// Double attributes
-		const char* doctype = "<element attr='red' attr='blue' />";
+		string doctype = "<element attr='red' attr='blue' />";
 
 		TiXmlDocument doc;
-		doc.Parse( doctype );
+		doc.Parse( doctype.begin(),doctype.end() );
 		
 		XmlTest( "Parsing repeated attributes.", true, doc.Error() );	// is an  error to tinyxml (didn't use to be, but caused issues)
 		//XmlTest( "Parsing repeated attributes.", "blue", doc.FirstChildElement( "element" )->Attribute( "attr" ) );
@@ -1119,10 +1144,10 @@ int main()
 
 	{
 		// Embedded null in stream.
-		const char* doctype = "<element att\0r='red' attr='blue' />";
+		string doctype = "<element att\0r='red' attr='blue' />";
 
 		TiXmlDocument doc;
-		doc.Parse( doctype );
+		doc.Parse( doctype.begin(),doctype.end() );
 		XmlTest( "Embedded null throws error.", true, doc.Error() );
 
 		#ifdef TIXML_USE_STL
@@ -1136,28 +1161,28 @@ int main()
 
     {
             // Legacy mode test. (This test may only pass on a western system)
-            const char* str =
+            string str =
                         "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>"
-                        "<ä>"
-                        "CöntäntßäöüÄÖÜ"
-                        "</ä>";
+                        "<kl>"
+                        "C"
+                        "</kj>";
 
             TiXmlDocument doc;
-            doc.Parse( str );
+            doc.Parse( str.begin(),str.end() );
 
             TiXmlHandle docHandle( &doc );
-            TiXmlHandle aHandle = docHandle.FirstChildElement( "ä" );
+            TiXmlHandle aHandle = docHandle.FirstChildElement( "C" );
             TiXmlHandle tHandle = aHandle.Child( 0 );
             assert( aHandle.Element() );
             assert( tHandle.Text() );
-            XmlTest( "ISO-8859-1 Parsing.", "CöntäntßäöüÄÖÜ", tHandle.Text()->Value() );
+            XmlTest( "ISO-8859-1 Parsing.", "Cntnt", tHandle.Text()->Value() );
     }
 
 	{
 		// Empty documents should return TIXML_ERROR_PARSING_EMPTY, bug 1070717
-		const char* str = "    ";
+		string str = "    ";
 		TiXmlDocument doc;
-		doc.Parse( str );
+		doc.Parse( str.begin(),str.end() );
 		XmlTest( "Empty document error TIXML_ERROR_DOCUMENT_EMPTY", TiXmlBase::TIXML_ERROR_DOCUMENT_EMPTY, doc.ErrorId() );
 	}
 	#ifndef TIXML_USE_STL
@@ -1176,7 +1201,8 @@ int main()
 		// Bug [ 1195696 ] from marlonism
 		TiXmlBase::SetCondenseWhiteSpace(false); 
 		TiXmlDocument xml; 
-		xml.Parse("<text><break/>This hangs</text>"); 
+		string str = "<text><break/>This hangs</text>";
+		xml.Parse(str.begin(),str.end()); 
 		XmlTest( "Test safe error return.", xml.Error(), false );
 	}
 
@@ -1184,12 +1210,14 @@ int main()
 		// Bug [ 1243992 ] - another infinite loop
 		TiXmlDocument doc;
 		doc.SetCondenseWhiteSpace(false);
-		doc.Parse("<p><pb></pb>test</p>");
+		string str = "<p><pb></pb>test</p>";
+		doc.Parse(str.begin(),str.end());
 	} 
 	{
 		// Low entities
 		TiXmlDocument xml;
-		xml.Parse( "<test>&#x0e;</test>" );
+		string str = "<test>&#x0e;</test>";
+		xml.Parse(str.begin(),str.end() );
 		const char result[] = { 0x0e, 0 };
 		XmlTest( "Low entities.", xml.FirstChildElement()->GetText(), result );
 		xml.Print();
@@ -1197,21 +1225,22 @@ int main()
 	{
 		// Bug [ 1451649 ] Attribute values with trailing quotes not handled correctly
 		TiXmlDocument xml;
-		xml.Parse( "<foo attribute=bar\" />" );
+		string str = "<foo attribute=bar\" />";
+		xml.Parse(str.begin(),str.end() );
 		XmlTest( "Throw error with bad end quotes.", xml.Error(), true );
 	}
 	#ifdef TIXML_USE_STL
 	{
 		// Bug [ 1449463 ] Consider generic query
 		TiXmlDocument xml;
-		xml.Parse( "<foo bar='3' barStr='a string'/>" );
+		string str = "<foo bar='3' barStr='a string'/>";
+		xml.Parse(str.begin(),str.end());
 
 		TiXmlElement* ele = xml.FirstChildElement();
 		double d;
 		int i;
 		float f;
 		bool b;
-		std::string str;
 
 		XmlTest( "QueryValueAttribute", ele->QueryValueAttribute( "bar", &d ), TIXML_SUCCESS );
 		XmlTest( "QueryValueAttribute", ele->QueryValueAttribute( "bar", &i ), TIXML_SUCCESS );
@@ -1231,18 +1260,19 @@ int main()
 	{
 		// [ 1505267 ] redundant malloc in TiXmlElement::Attribute
 		TiXmlDocument xml;
-		xml.Parse( "<foo bar='3' />" );
+		string str = "<foo bar='3' />";
+		xml.Parse(str.begin(),str.end());
 		TiXmlElement* ele = xml.FirstChildElement();
 		double d;
 		int i;
 
 		std::string bar = "bar";
 
-		const std::string* atrrib = ele->Attribute( bar );
+		std::string atrrib = ele->Attribute( bar );
 		ele->Attribute( bar, &d );
 		ele->Attribute( bar, &i );
 
-		XmlTest( "Attribute", atrrib->empty(), false );
+		XmlTest( "Attribute", atrrib.empty(), false );
 		XmlTest( "Attribute", (d==3.0), true );
 		XmlTest( "Attribute", (i==3), true );
 	}
@@ -1259,9 +1289,11 @@ int main()
 	{
 		// [ 1663758 ] Failure to report error on bad XML
 		TiXmlDocument xml;
-		xml.Parse("<x>");
+		string str = "<x>";
+		xml.Parse(str.begin(),str.end());
 		XmlTest("Missing end tag at end of input", xml.Error(), true);
-		xml.Parse("<x> ");
+		str = "<x> ";
+		xml.Parse(str.begin(),str.end());
 		XmlTest("Missing end tag with trailing whitespace", xml.Error(), true);
 	} 
 
@@ -1269,7 +1301,8 @@ int main()
 		// [ 1635701 ] fail to parse files with a tag separated into two lines
 		// I'm not sure this is a bug. Marked 'pending' for feedback.
 		TiXmlDocument xml;
-		xml.Parse( "<title><p>text</p\n><title>" );
+		string str = "<title><p>text</p\n><title>";
+		xml.Parse( str.begin(),str.end() );
 		//xml.Print();
 		//XmlTest( "Tag split by newline", xml.Error(), false );
 	}
@@ -1295,8 +1328,9 @@ int main()
 	{
 		// [ 1475201 ] TinyXML parses entities in comments
 		TiXmlDocument xml;
-		xml.Parse("<!-- declarations for <head> & <body> -->"
-				  "<!-- far &amp; away -->" );
+		string str = "<!-- declarations for <head> & <body> -->"
+			"<!-- far &amp; away -->";
+		xml.Parse(str.begin(), str.end());
 
 		TiXmlNode* e0 = xml.FirstChild();
 		TiXmlNode* e1 = e0->NextSibling();
@@ -1309,11 +1343,14 @@ int main()
 
 	{
 		TiXmlDocument xml;
-		xml.Parse( "<Parent>"
-						"<child1 att=''/>"
-						"<!-- With this comment, child2 will not be parsed! -->"
-						"<child2 att=''/>"
-					"</Parent>" );
+		string str = "<Parent>"
+			"<child1 att=''/>"
+			"<!-- With this comment, child2 will not be parsed! -->"
+			"<child2 att=''/>"
+			"</Parent>";
+		xml.Parse(str.begin(),str.end());
+
+
 		int count = 0;
 
 		TiXmlNode* ele = 0;
@@ -1325,12 +1362,12 @@ int main()
 
 	{
 		// trying to repro ]1874301]. If it doesn't go into an infinite loop, all is well.
-		unsigned char buf[] = "<?xml version=\"1.0\" encoding=\"utf-8\"?><feed><![CDATA[Test XMLblablablalblbl";
+		string buf = "<?xml version=\"1.0\" encoding=\"utf-8\"?><feed><![CDATA[Test XMLblablablalblbl";
 		buf[60] = 239;
 		buf[61] = 0;
 
 		TiXmlDocument doc;
-		doc.Parse( (const char*)buf);
+		doc.Parse( buf.begin(),buf.end());
 	} 
 
 
@@ -1338,14 +1375,16 @@ int main()
 		// bug 1827248 Error while parsing a little bit malformed file
 		// Actually not malformed - should work.
 		TiXmlDocument xml;
-		xml.Parse( "<attributelist> </attributelist >" );
+		string str = "<attributelist> </attributelist >";
+		xml.Parse( str.begin(),str.end() );
 		XmlTest( "Handle end tag whitespace", false, xml.Error() );
 	}
 
 	{
 		// This one must not result in an infinite loop
 		TiXmlDocument xml;
-		xml.Parse( "<infinite>loop" );
+		string str = "<infinite>loop";
+		xml.Parse( str.begin(),str.end());
 		XmlTest( "Infinite loop test.", true, true );
 	}
 
@@ -1353,7 +1392,8 @@ int main()
 		// 1709904 - can not repro the crash
 		{
 			TiXmlDocument xml;
-			xml.Parse( "<tag>/</tag>" );
+			string str = "<tag>/</tag>";
+			xml.Parse( str.begin(),str.end() );
 			XmlTest( "Odd XML parsing.", xml.FirstChild()->Value(), "tag" );
 		}
 		/* Could not repro. {
