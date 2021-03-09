@@ -330,8 +330,7 @@ std::string::const_iterator TiXmlBase::SkipWhiteSpace( std::string::const_iterat
 	return first;
 }
 
-#ifdef TIXML_USE_STL
-/*static*/ bool TiXmlBase::StreamWhiteSpace( std::istream * in, TIXML_STRING * tag )
+/*static*/ bool TiXmlBase::StreamWhiteSpace( std::istream * in, std::string * tag )
 {
 	for( ;; )
 	{
@@ -346,7 +345,7 @@ std::string::const_iterator TiXmlBase::SkipWhiteSpace( std::string::const_iterat
 	}
 }
 
-/*static*/ bool TiXmlBase::StreamTo( std::istream * in, int character, TIXML_STRING * tag )
+/*static*/ bool TiXmlBase::StreamTo( std::istream * in, int character, std::string * tag )
 {
 	//assert( character > 0 && character < 128 );	// else it won't work in utf-8
 	while ( in->good() )
@@ -362,12 +361,11 @@ std::string::const_iterator TiXmlBase::SkipWhiteSpace( std::string::const_iterat
 	}
 	return false;
 }
-#endif
 
 // One of TinyXML's more performance demanding functions. Try to keep the memory overhead down. The
 // "assign" optimization removes over 10% of the execution time.
 //
-std::string::const_iterator TiXmlBase::ReadName( std::string::const_iterator first, std::string::const_iterator last, TIXML_STRING * name, TiXmlEncoding encoding )
+std::string::const_iterator TiXmlBase::ReadName( std::string::const_iterator first, std::string::const_iterator last, std::string * name, TiXmlEncoding encoding )
 {
 	// Oddly, not supported on some compilers,
 	//name->clear();
@@ -407,7 +405,7 @@ std::string::const_iterator TiXmlBase::ReadName( std::string::const_iterator fir
 string::const_iterator TiXmlBase::GetEntity( std::string::const_iterator first, std::string::const_iterator last, char* value, int* length, TiXmlEncoding encoding )
 {
 	// Presume an entity, and pull it out.
-    TIXML_STRING ent;
+    std::string ent;
 	int i;
 	*length = 0;
 
@@ -512,7 +510,7 @@ bool TiXmlBase::StringEqual( std::string::const_iterator first, std::string::con
 }
 
 std::string::const_iterator TiXmlBase::ReadText(std::string::const_iterator first, std::string::const_iterator last,
-	TIXML_STRING * text,bool trimWhiteSpace,const char* endTag,	bool caseInsensitive, TiXmlEncoding encoding )
+	std::string * text,bool trimWhiteSpace,const char* endTag,	bool caseInsensitive, TiXmlEncoding encoding )
 {
     *text = "";
 	if (    !trimWhiteSpace			// certain tags always keep whitespace
@@ -572,9 +570,7 @@ std::string::const_iterator TiXmlBase::ReadText(std::string::const_iterator firs
 	return ( first!=last) ? first : last;
 }
 
-#ifdef TIXML_USE_STL
-
-void TiXmlDocument::StreamIn( std::istream * in, TIXML_STRING * tag )
+void TiXmlDocument::StreamIn( std::istream * in, std::string * tag )
 {
 	// The basic issue with a document is that we don't know what we're
 	// streaming. Read something presumed to be a tag (and hope), then
@@ -639,7 +635,6 @@ void TiXmlDocument::StreamIn( std::istream * in, TIXML_STRING * tag )
 	SetError( TIXML_ERROR, str.begin(),str.end() , 0, TIXML_ENCODING_UNKNOWN );
 }
 
-#endif
 
 std::string::const_iterator TiXmlDocument::Parse(std::string::const_iterator first, std::string::const_iterator last, TiXmlParsingData* prevData, TiXmlEncoding encoding )
 {
@@ -836,9 +831,7 @@ TiXmlNode* TiXmlNode::Identify( std::string::const_iterator first, std::string::
 	return returnNode;
 }
 
-#ifdef TIXML_USE_STL
-
-void TiXmlElement::StreamIn (std::istream * in, TIXML_STRING * tag)
+void TiXmlElement::StreamIn (std::istream * in, std::string * tag)
 {
 	// We're called with some amount of pre-parsing. That is, some of "this"
 	// element is in "tag". Go ahead and stream to the closing ">"
@@ -985,7 +978,6 @@ void TiXmlElement::StreamIn (std::istream * in, TIXML_STRING * tag)
 		}
 	}
 }
-#endif
 
 std::string::const_iterator TiXmlElement::Parse(std::string::const_iterator first, std::string::const_iterator last, TiXmlParsingData* data, TiXmlEncoding encoding )
 {
@@ -1022,7 +1014,7 @@ std::string::const_iterator TiXmlElement::Parse(std::string::const_iterator firs
 		return last;
 	}
 
-    TIXML_STRING endTag ("</");
+    std::string endTag ("</");
 	endTag += value;
 
 	// Check for and read attributes. Also look for an empty
@@ -1066,7 +1058,7 @@ std::string::const_iterator TiXmlElement::Parse(std::string::const_iterator firs
 			// </foo > and
 			// </foo> 
 			// are both valid end tags.
-			if ( StringEqual( first,last , endTag.c_str(), false ) )
+			if ( StringEqual( first,last , endTag, false ) )
 			{
 				first += endTag.length();
 				first = SkipWhiteSpace( first, last );
@@ -1189,9 +1181,7 @@ std::string::const_iterator TiXmlElement::ReadValue( std::string::const_iterator
 	return first;
 }
 
-
-#ifdef TIXML_USE_STL
-void TiXmlUnknown::StreamIn( std::istream * in, TIXML_STRING * tag )
+void TiXmlUnknown::StreamIn( std::istream * in, std::string * tag )
 {
 	while ( in->good() )
 	{
@@ -1215,8 +1205,6 @@ void TiXmlUnknown::StreamIn( std::istream * in, TIXML_STRING * tag )
 		}
 	}
 }
-#endif
-
 
 std::string::const_iterator TiXmlUnknown::Parse(std::string::const_iterator first, std::string::const_iterator last, TiXmlParsingData* data, TiXmlEncoding encoding)
 {
@@ -1252,8 +1240,7 @@ std::string::const_iterator TiXmlUnknown::Parse(std::string::const_iterator firs
 	return first;
 }
 
-#ifdef TIXML_USE_STL
-void TiXmlComment::StreamIn( std::istream * in, TIXML_STRING * tag )
+void TiXmlComment::StreamIn( std::istream * in, std::string * tag )
 {
 	while ( in->good() )
 	{
@@ -1280,8 +1267,6 @@ void TiXmlComment::StreamIn( std::istream * in, TIXML_STRING * tag )
 		}
 	}
 }
-#endif
-
 
 string::const_iterator TiXmlComment::Parse( std::string::const_iterator first, std::string::const_iterator last, TiXmlParsingData* data, TiXmlEncoding encoding )
 {
@@ -1372,8 +1357,7 @@ std::string::const_iterator TiXmlAttribute::Parse(std::string::const_iterator fi
 	return first;
 }
 
-#ifdef TIXML_USE_STL
-void TiXmlText::StreamIn( std::istream * in, TIXML_STRING * tag )
+void TiXmlText::StreamIn( std::istream * in, std::string * tag )
 {
 	while ( in->good() )
 	{
@@ -1405,7 +1389,6 @@ void TiXmlText::StreamIn( std::istream * in, TIXML_STRING * tag )
 		}    
 	}
 }
-#endif
 
 string::const_iterator TiXmlText::Parse( std::string::const_iterator first, std::string::const_iterator last, TiXmlParsingData* data, TiXmlEncoding encoding )
 {
@@ -1442,7 +1425,7 @@ string::const_iterator TiXmlText::Parse( std::string::const_iterator first, std:
 			++first;
 		}
 
-		TIXML_STRING dummy; 
+		std::string dummy; 
 		first = ReadText(first, last, &dummy, false, endTag, false, encoding );
 		return first;
 	}
@@ -1458,8 +1441,7 @@ string::const_iterator TiXmlText::Parse( std::string::const_iterator first, std:
 	}
 }
 
-#ifdef TIXML_USE_STL
-void TiXmlDeclaration::StreamIn( std::istream * in, TIXML_STRING * tag )
+void TiXmlDeclaration::StreamIn( std::istream * in, std::string * tag )
 {
 	while ( in->good() )
 	{
@@ -1483,7 +1465,6 @@ void TiXmlDeclaration::StreamIn( std::istream * in, TIXML_STRING * tag )
 		}
 	}
 }
-#endif
 
 string::const_iterator TiXmlDeclaration::Parse(std::string::const_iterator first, std::string::const_iterator last, TiXmlParsingData* data, TiXmlEncoding _encoding )
 {
