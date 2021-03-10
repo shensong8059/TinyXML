@@ -365,13 +365,11 @@ std::string::const_iterator TiXmlBase::SkipWhiteSpace( std::string::const_iterat
 // One of TinyXML's more performance demanding functions. Try to keep the memory overhead down. The
 // "assign" optimization removes over 10% of the execution time.
 //
-std::string::const_iterator TiXmlBase::ReadName( std::string::const_iterator first, std::string::const_iterator last, std::string * name, TiXmlEncoding encoding )
+std::string::const_iterator TiXmlBase::ReadName( std::string::const_iterator first, std::string::const_iterator last, std::string & name, TiXmlEncoding encoding )
 {
 	// Oddly, not supported on some compilers,
 	//name->clear();
 	// So use this:
-	*name = "";
-	assert( first!=last );
 
 	// Names start with letters or underscores.
 	// Of course, in unicode, tinyxml has no idea what a letter *is*. The
@@ -380,26 +378,14 @@ std::string::const_iterator TiXmlBase::ReadName( std::string::const_iterator fir
 	// After that, they can be letters, underscores, numbers,
 	// hyphens, or colons. (Colons are valid only for namespaces,
 	// but tinyxml can't tell namespaces from names.)
-	if (    first!=last
-		 && ( IsAlpha( (unsigned char) *first, encoding ) || *first == '_' ) )
-	{
-		auto start = first;
-		while(		first !=last
-				&&	(		IsAlphaNum( (unsigned char ) *first, encoding ) 
-						 || *first == '_'
-						 || *first == '-'
-						 || *first == '.'
-						 || *first == ':' ) )
-		{
-			//(*name) += *first; // expensive
-			++first;
-		}
-		if ( first-start > 0 ) {
-			name->assign( start, first );
-		}
-		return first;
-	}
-	return last;
+	regex re("[[:alpha:]_][[:alnum:]_\\-\\.:]*");
+	smatch m;
+	auto res = regex_search(first, last, m, re);
+	if (!res)
+		return last;
+	name = m[0].str();
+	first = m[0].second;
+	return first;
 }
 
 string::const_iterator TiXmlBase::GetEntity( std::string::const_iterator first, std::string::const_iterator last, char* value, int* length, TiXmlEncoding encoding )
@@ -1007,7 +993,7 @@ std::string::const_iterator TiXmlElement::Parse(std::string::const_iterator firs
 	// Read the name.
 	auto pErr = first;
 
-    first = ReadName( first, last, &value, encoding );
+    first = ReadName( first, last, value, encoding );
 	if ( first ==last )
 	{
 		if ( document )	document->SetError( TIXML_ERROR_FAILED_TO_READ_ELEMENT_NAME, pErr,last , data, encoding );
@@ -1296,7 +1282,7 @@ std::string::const_iterator TiXmlAttribute::Parse(std::string::const_iterator fi
 	}
 	// Read the name, the '=' and the value.
 	auto pErr = first;
-	first = ReadName( first,last , &name, encoding );
+	first = ReadName( first,last , name, encoding );
 	if ( first==last)
 	{
 		if ( document ) document->SetError( TIXML_ERROR_READING_ATTRIBUTES, pErr,last , data, encoding );

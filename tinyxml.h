@@ -302,7 +302,7 @@ protected:
 		a pointer just past the last character of the name,
 		or 0 if the function has an error.
 	*/
-	static std::string::const_iterator ReadName( std::string::const_iterator first, std::string::const_iterator last, std::string* name, TiXmlEncoding encoding );
+	static std::string::const_iterator ReadName( std::string::const_iterator first, std::string::const_iterator last, std::string & name, TiXmlEncoding encoding );
 
 	/*	Reads text. Returns a pointer past the given end tag.
 		Wickedly complex options, but it keeps the (sensitive) code in one place.
