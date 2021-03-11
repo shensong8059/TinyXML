@@ -26,6 +26,7 @@ distribution.
 
 #include <regex>
 #include <functional>
+#include <unordered_map>
 
 //#include <ctype.h>
 //#include <stddef.h>
@@ -388,99 +389,33 @@ std::string::const_iterator TiXmlBase::ReadName( std::string::const_iterator fir
 	return first;
 }
 
-string::const_iterator TiXmlBase::GetEntity( std::string::const_iterator first, std::string::const_iterator last, char* value, int* length, TiXmlEncoding encoding )
+string::const_iterator TiXmlBase::GetEntity( std::string::const_iterator first, std::string::const_iterator last, char & value, int & length, TiXmlEncoding encoding )
 {
 	// Presume an entity, and pull it out.
-    std::string ent;
-	int i;
-	*length = 0;
-
-	if ( *(first+1) && *(first+1) == '#' && *(first+2) )
+	regex re("^&(?:#(x[[:xdigit:]]+|[[:digit:]])+|amp|lt|gt|quot|apos);");
+	smatch m;
+	auto res = regex_search(first, last, m, re);
+	if (!res)
+		return last;
+	if (m[1].matched)
 	{
-		unsigned long ucs = 0;
-		ptrdiff_t delta = 0;
-		unsigned mult = 1;
-
-		if ( *(first+2) == 'x' )
-		{
-			// Hexadecimal.
-			if ( !*(first+3) ) return last;
-
-			auto q = first+3;
-			q = find( q,last, ';' );
-
-			if ( q==last ) return last;
-
-			delta = q-first;
-			--q;
-
-			while ( *q != 'x' )
-			{
-				if ( *q >= '0' && *q <= '9' )
-					ucs += mult * (*q - '0');
-				else if ( *q >= 'a' && *q <= 'f' )
-					ucs += mult * (*q - 'a' + 10);
-				else if ( *q >= 'A' && *q <= 'F' )
-					ucs += mult * (*q - 'A' + 10 );
-				else 
-					return last;
-				mult *= 16;
-				--q;
-			}
-		}
-		else
-		{
-			// Decimal.
-			if ( !*(first+2) ) return last;
-
-			auto q = first+2;
-			q = find(q, last, ';' );
-
-			if (q == last) return last;
-
-			delta = q-first;
-			--q;
-
-			while ( *q != '#' )
-			{
-				if ( *q >= '0' && *q <= '9' )
-					ucs += mult * (*q - '0');
-				else 
-					return last;
-				mult *= 10;
-				--q;
-			}
-		}
-		if ( encoding == TIXML_ENCODING_UTF8 )
-		{
-			// convert the UCS to UTF-8
-			ConvertUTF32ToUTF8( ucs, value, length );
-		}
-		else
-		{
-			*value = (char)ucs;
-			*length = 1;
-		}
-		return first + delta + 1;
+		auto ucs = stoul(m[1].str());
+		value = (char)ucs;
+		length = 1;
 	}
-
-	// Now try to match it.
-	for( i=0; i<NUM_ENTITY; ++i )
+	else
 	{
-		if ( equal( entity[i].str, entity[i].str+ entity[i].strLength, first ) )
-		{
-			assert( strlen( entity[i].str ) == entity[i].strLength );
-			*value = entity[i].chr;
-			*length = 1;
-			return ( first + entity[i].strLength );
-		}
+		// Now try to match it.
+		unordered_map<string, char> entity = {
+		{ "&amp;", '&' },
+		{ "&lt;",   '<' },
+		{ "&gt;",   '>' },
+		{ "&quot;", '\"' },
+		{ "&apos;", '\'' } };
+		value = entity[m[0].str()];
+		length = 1;
 	}
-
-	// So it wasn't an entity, its unrecognized, or something like that.
-	*value = *first;	// Don't put back the last one, since we return it!
-	//*length = 1;	// Leave unrecognized entities - this doesn't really work.
-					// Just writes strange XML.
-	return first+1;
+	return m[0].second;
 }
 
 
@@ -509,7 +444,7 @@ std::string::const_iterator TiXmlBase::ReadText(std::string::const_iterator firs
 		{
 			int len;
 			char cArr[4] = { 0, 0, 0, 0 };
-			first = GetChar( first,last , cArr, &len, encoding );
+			first = GetChar( first,last, cArr, len, encoding );
 			text->append( cArr, len );
 		}
 	}
@@ -543,7 +478,7 @@ std::string::const_iterator TiXmlBase::ReadText(std::string::const_iterator firs
 				}
 				int len;
 				char cArr[4] = { 0, 0, 0, 0 };
-				first = GetChar( first,last , cArr, &len, encoding );
+				first = GetChar( first,last, cArr, len, encoding );
 				if ( len == 1 )
 					(*text) += cArr[0];	// more efficient
 				else
@@ -1000,9 +935,6 @@ std::string::const_iterator TiXmlElement::Parse(std::string::const_iterator firs
 		return last;
 	}
 
-    std::string endTag ("</");
-	endTag += value;
-
 	// Check for and read attributes. Also look for an empty
 	// tag or an end tag.
 	while ( first !=last)
@@ -1044,22 +976,16 @@ std::string::const_iterator TiXmlElement::Parse(std::string::const_iterator firs
 			// </foo > and
 			// </foo> 
 			// are both valid end tags.
-			if ( StringEqual( first,last , endTag, false ) )
-			{
-				first += endTag.length();
-				first = SkipWhiteSpace( first, last );
-				if ( first !=last && *first == '>' ) {
-					++first;
-					return first;
-				}
-				if ( document ) document->SetError( TIXML_ERROR_READING_END_TAG, first,last , data, encoding );
-				return last;
-			}
-			else
+			regex re("^</([[:alpha:]_][[:alnum:]_\\-\\.:]*)[\\s]*>");
+			smatch m;
+			auto res = regex_search(first, last, m, re);
+			if (!res||value!=m[1].str())
 			{
 				if ( document ) document->SetError( TIXML_ERROR_READING_END_TAG, first,last , data, encoding );
 				return last;
 			}
+			first = m[0].second;
+			return first;
 		}
 		else
 		{

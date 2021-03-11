@@ -315,38 +315,38 @@ protected:
 		TiXmlEncoding encoding );	// the current encoding
 
 	// If an entity has been found, transform it into a character.
-	static std::string::const_iterator GetEntity( std::string::const_iterator first, std::string::const_iterator last, char* value, int* length, TiXmlEncoding encoding );
+	static std::string::const_iterator GetEntity( std::string::const_iterator first, std::string::const_iterator last, char & value, int & length, TiXmlEncoding encoding );
 
 	// Get a character, while interpreting entities.
 	// The length can be from 0 to 4 bytes.
-	inline static std::string::const_iterator GetChar( std::string::const_iterator first, std::string::const_iterator last, char* _value, int* length, TiXmlEncoding encoding )
+	inline static std::string::const_iterator GetChar( std::string::const_iterator first, std::string::const_iterator last, char * _value, int & length, TiXmlEncoding encoding )
 	{
 		assert(first!=last);
 		if ( encoding == TIXML_ENCODING_UTF8 )
 		{
-			*length = utf8ByteTable[ *(first) ];
-			assert( *length >= 0 && *length < 5 );
+			length = utf8ByteTable[ *(first) ];
+			assert( length >= 0 && length < 5 );
 		}
 		else
 		{
-			*length = 1;
+			length = 1;
 		}
 
-		if ( *length == 1 )
+		if ( length == 1 )
 		{
 			if ( *first == '&' )
-				return GetEntity( first,last , _value, length, encoding );
+				return GetEntity( first,last, *_value, length, encoding );
 			*_value = *first;
 			return first+1;
 		}
-		else if ( *length )
+		else if ( length )
 		{
 			//strncpy( _value, p, *length );	// lots of compilers don't like this function (unsafe),
 												// and the null terminator isn't needed
-			for( int i=0; first[i] && i<*length; ++i ) {
+			for( int i=0; first[i] && i<length; ++i ) {
 				_value[i] = first[i];
 			}
-			return first + (*length);
+			return first + (length);
 		}
 		else
 		{
