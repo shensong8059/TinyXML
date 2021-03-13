@@ -307,11 +307,12 @@ protected:
 	/*	Reads text. Returns a pointer past the given end tag.
 		Wickedly complex options, but it keeps the (sensitive) code in one place.
 	*/
-	static std::string::const_iterator ReadText(	std::string::const_iterator first, std::string::const_iterator last,// where to start
-		std::string* text,	// the string read
-		bool ignoreWhiteSpace,// whether to keep the white space
-		const char* endTag,// what ends this text
-		bool ignoreCase,// whether to ignore case in the end tag
+	static std::string::const_iterator ReadText(	std::string::const_iterator first, std::string::const_iterator last, std::string & text,
+	// the string read
+		bool ignoreWhiteSpace, const std::string & endTag,
+// what ends this text
+		bool ignoreCase,
+// whether to ignore case in the end tag
 		TiXmlEncoding encoding );	// the current encoding
 
 	// If an entity has been found, transform it into a character.
@@ -498,8 +499,6 @@ public:
 		Text:		the text string
 		@endverbatim
 	*/
-	void SetValue(const char * _value) { value = _value;}
-
 	/// STL std::string form.
 	void SetValue( const std::string& _value )	{ value = _value; }
 
@@ -1142,18 +1141,13 @@ public:
 		normal, encoded text. If you want it be output as a CDATA text
 		element, set the parameter _cdata to 'true'
 	*/
-	TiXmlText (const char * initValue ) : TiXmlNode (TiXmlNode::TINYXML_TEXT)
-	{
-		SetValue( initValue );
-		cdata = false;
-	}
 	virtual ~TiXmlText() {}
 
 	/// Constructor.
-	TiXmlText( const std::string& initValue ) : TiXmlNode (TiXmlNode::TINYXML_TEXT)
+	TiXmlText(const std::string& initValue) :
+		TiXmlNode(TiXmlNode::TINYXML_TEXT)
 	{
 		SetValue( initValue );
-		cdata = false;
 	}
 
 	TiXmlText( const TiXmlText& copy ) : TiXmlNode( TiXmlNode::TINYXML_TEXT )	{ copy.CopyTo( this ); }
@@ -1186,7 +1180,7 @@ protected :
 	virtual void StreamIn( std::istream * in, std::string * tag );
 
 private:
-	bool cdata;			// true if this should be input and output as a CDATA style text element
+	bool cdata=false;			// true if this should be input and output as a CDATA style text element
 };
 
 

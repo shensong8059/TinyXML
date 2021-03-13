@@ -392,14 +392,20 @@ std::string::const_iterator TiXmlBase::ReadName( std::string::const_iterator fir
 string::const_iterator TiXmlBase::GetEntity( std::string::const_iterator first, std::string::const_iterator last, char & value, int & length, TiXmlEncoding encoding )
 {
 	// Presume an entity, and pull it out.
-	regex re("^&(?:#(x[[:xdigit:]]+|[[:digit:]])+|amp|lt|gt|quot|apos);");
+	regex re("^&(?:#(?:x([[:xdigit:]]+)|([[:digit:]]+))+|amp|lt|gt|quot|apos);");
 	smatch m;
 	auto res = regex_search(first, last, m, re);
 	if (!res)
 		return last;
 	if (m[1].matched)
 	{
-		auto ucs = stoul(m[1].str());
+		auto ucs = stoul(m[1].str(),nullptr,16);
+		value = (char)ucs;
+		length = 1;
+	}
+	else if (m[2].matched)
+	{
+		auto ucs = stoul(m[2].str());
 		value = (char)ucs;
 		length = 1;
 	}
@@ -430,10 +436,10 @@ bool TiXmlBase::StringEqual( std::string::const_iterator first, std::string::con
 	return res;
 }
 
-std::string::const_iterator TiXmlBase::ReadText(std::string::const_iterator first, std::string::const_iterator last,
-	std::string * text,bool trimWhiteSpace,const char* endTag,	bool caseInsensitive, TiXmlEncoding encoding )
+std::string::const_iterator TiXmlBase::ReadText(std::string::const_iterator first,
+ std::string::const_iterator last, std::string & text,bool trimWhiteSpace, const std::string & endTag,	bool caseInsensitive, TiXmlEncoding encoding )
 {
-    *text = "";
+    text = "";
 	if (    !trimWhiteSpace			// certain tags always keep whitespace
 		 || !condenseWhiteSpace )	// if true, whitespace is always kept
 	{
@@ -445,7 +451,7 @@ std::string::const_iterator TiXmlBase::ReadText(std::string::const_iterator firs
 			int len;
 			char cArr[4] = { 0, 0, 0, 0 };
 			first = GetChar( first,last, cArr, len, encoding );
-			text->append( cArr, len );
+			text.append( cArr, len );
 		}
 	}
 	else
@@ -473,21 +479,21 @@ std::string::const_iterator TiXmlBase::ReadText(std::string::const_iterator firs
 				// new character. Any whitespace just becomes a space.
 				if ( whitespace )
 				{
-					(*text) += ' ';
+					(text) += ' ';
 					whitespace = false;
 				}
 				int len;
 				char cArr[4] = { 0, 0, 0, 0 };
 				first = GetChar( first,last, cArr, len, encoding );
 				if ( len == 1 )
-					(*text) += cArr[0];	// more efficient
+					(text) += cArr[0];	// more efficient
 				else
-					text->append( cArr, len );
+					text.append( cArr, len );
 			}
 		}
 	}
 	if ( first!=last )
-		first += strlen( endTag );
+		first += endTag.size();
 	return ( first!=last) ? first : last;
 }
 
@@ -1237,13 +1243,13 @@ std::string::const_iterator TiXmlAttribute::Parse(std::string::const_iterator fi
 	{
 		++first;
 		end = "\'";		// single quote in string
-		first = ReadText( first, last, &value, false, end, false, encoding );
+		first = ReadText( first, last, value, false, end, false, encoding );
 	}
 	else if ( *first == DOUBLE_QUOTE )
 	{
 		++first;
 		end = "\"";		// double quote in string
-		first = ReadText(first,last, &value, false, end, false, encoding );
+		first = ReadText(first,last, value, false, end, false, encoding );
 	}
 	else
 	{
@@ -1313,8 +1319,8 @@ string::const_iterator TiXmlText::Parse( std::string::const_iterator first, std:
 		location = data->Cursor();
 	}
 
-	const char* const startTag = "<!\\[CDATA\\[";
-	const char* const endTag   = "\\]\\]>";
+	string startTag = "<![CDATA[";
+	string endTag   = "]]>";
 
 	if ( cdata || StringEqual(first ,last , startTag, false ) )
 	{
@@ -1326,7 +1332,7 @@ string::const_iterator TiXmlText::Parse( std::string::const_iterator first, std:
 				document->SetError( TIXML_ERROR_PARSING_CDATA, first, last, data, encoding );
 			return last;
 		}
-		first += strlen( startTag );
+		first += startTag.size();
 
 		// Keep all the white space, ignore the encoding, etc.
 		while (	   first != last
@@ -1338,7 +1344,7 @@ string::const_iterator TiXmlText::Parse( std::string::const_iterator first, std:
 		}
 
 		std::string dummy; 
-		first = ReadText(first, last, &dummy, false, endTag, false, encoding );
+		first = ReadText(first, last, dummy, false, endTag, false, encoding );
 		return first;
 	}
 	else
@@ -1346,7 +1352,7 @@ string::const_iterator TiXmlText::Parse( std::string::const_iterator first, std:
 		bool ignoreWhite = true;
 
 		const char* end = "<";
-		first = ReadText(first, last, &value, ignoreWhite, end, false, encoding );
+		first = ReadText(first, last, value, ignoreWhite, end, false, encoding );
 		if ( first!= last)
 			return first-1;	// don't truncate the '<'
 		return last;
